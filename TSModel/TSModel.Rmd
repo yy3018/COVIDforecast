@@ -8,11 +8,19 @@ output: pdf_document
 # Library Import
 library(tidyverse)
 library(forecast)
+library(lubridate)
+library(tseries)
 ```
 
 ```{r,message=FALSE}
 # Data Import
 covid <- read_csv("C:/Users/Yiling Yang/Desktop/school_work/Project/COVIDforecast/data/data-yqfdF.csv")
+covid$DATE_OF_INTEREST <-  as.Date(parse_date_time(covid$DATE_OF_INTEREST,
+                            guess_formats(
+                              as.character(covid$DATE_OF_INTEREST), c("mdy", "dmy", "dmY")
+                            )))
+
+covid <- covid %>% rename(Date = DATE_OF_INTEREST) %>% select(Date,Cases)
 ```
 
 
@@ -22,7 +30,31 @@ This is a personal project aimming to forecast the future daily confirmed cases 
 
 # Exploratory Data Analysis
 
+To fit time series model, we usually need to make sure the stationary assumption held. I will perform 3 ways to check it: 1) Plot the time series, 2) Plot the ACF, and 3) Run ADF test.
+
+## 1. Data at glance
+
+```{r}
+ggplot(covid,aes(x=Date,y=Cases)) + geom_line()
+```
+
+The data are not bounded very well, which might imply non-stationary.
+
+## 2. ACF
+```{r}
+ggAcf(covid$Cases,type="correlation")
+```
+
+The autocorrelation graph also shows a slow decreasing of the autocorrelation coefficient. This can also be a sign of non-stationary.
+
+## 3. Augmented Dickey-Fuller Test
+```{r}
+adf.test(covid$Cases)
+```
 
 
+The ADF test output confirms with previous two chunks' output that the data is highly likely not stationary. We then might need transform it through differencing or detrending. Fortunately, the auto.arima function will help us achieve that.
 
+# Model Fitting
 
+## ARMA
